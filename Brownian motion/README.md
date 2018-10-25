@@ -5,6 +5,7 @@ One_sided_Daniels_boundary_midpoint_correction.jl
 - Uses a two-piece Brownian Bridge Correction (BBC) 
 - Uses a midpoint correction for the state space
 - Uses a boundary dependent state space
+- Contains exact value for comparison
 
 kolmogorov_smirnov_novikov.jl
 - Returns the approximated probability a Brownian motion trajectory crosses either boundary an upper boundary 3sqrt(t) or lower boundary -3sqrt(t)
