@@ -62,17 +62,16 @@ vec = zeros(N)
 end
 
 # monte carlo live stream
-function monte_carlo_2(n = 10)
-X = wiener(n)
-runningmean = mult(X) 
-i = 1
+# n = 10,  i = 6372972500, E = 0.5198462400687179,
+function monte_carlo_2(n = 10, i = 6372972500, inital = 0.5198462400687179)
+runningmean = initial 
 	while 1 == 1
 		X = wiener(n)
 		runningmean =  i/(i+1)*runningmean +  mult(X)/(i+1) 
 		if i % 2500 == 0
 			print("running mean: ", runningmean, " iteration: ", i ,"\r")
 		end
-		i +=1 
+		i += 1 
 	end
 	return runningmean
 end
@@ -88,6 +87,32 @@ function guideplot(N, s = 0.05)
 	plot(1:N, 1 ./((1:N).^2)*s ,   label = L"1/n^2",   ls = "--", color = "black")
 	plot(1:N, 1 ./((1:N).^4)*s ,   label = L"1/n^4",   ls=  "--", color = "black")
 end
+
+
+@doc """
+    dyn_conv_plot(n)
+
+Plots convergence dynamically.
+Careful, has an unfinishing monte carlo loop
+""" -> 
+function dyn_conv_plot(n)
+i = 1
+bcp_vec= zeros(n)
+while 1 == 1
+	for j in 1:n
+		bcp_vec[j] = bcp_vec[j]*i/(i+1) +  mult(wiener(j))/(i+1)
+	end
+	if i % 10000 == 0
+		plt[:cla]()
+		guideplot(n)
+		plot(1:n, abs.(bcp_vec - ones(n) .* exact_limit()), marker = "o")	
+		plt[:pause](0.0001)
+	end
+	print("iteration: ", i ,"\r")
+	i += 1
+end
+end
+
 
 
 @doc """
@@ -110,4 +135,5 @@ plot(xvec, vec,marker="o")
 return vec
 end
 
-conv_plot(10,1000000,1)
+# conv_plot(10,1000000,1)
+
