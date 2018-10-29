@@ -36,40 +36,14 @@ function exact_limit(T = 1, theta = 1)
 end
 
 @doc """
-	J(a1, b1, a2, b2, t1, t2, x)
-
-Returns the exact probability that a Brownian bridge crosses two piecewise linear boundary:
-a1 + b1 t, 0 <= t <= t1
-a2 + b2 t, t1 <= t <= t2
-""" -> 
-function J(a1, b1, a2, b2, t1, t2, x)
-h = (a1 + b1*t1)/t1 - x/t2
-T = sqrt(t2*t1/(t2-t1))
-a2d = b2 + (a2 - x)/t2
-a1d = a1*(b1 + (a1 - x)/t2)
-J = 1 - cdf(Normal(),h*T) + exp(-2*a2*a2d)*
-    cdf(Normal(), (h - 2*a2d)*T ) +
-    exp(-2*a1d)* cdf(Normal(), h*T - 2*a1/T) -
-    exp(-2*a1d + (4*a1- 2*a2)*a2d )*
-    cdf(Normal(), (h - 2*a2d)*T - 2*a1/T )
-return J
-end
-
-@doc """
-	bbb(x0, x1, t0, t2, T) 
+	bbb(x0, x1, t0, t1, T) 
 
 Returns the exact probability that a Brownian bridge starting at x0 and ending at x1 survives 
 a two piecewise linear boundary approximation of g(t):
-g(t), 0  <= t <= t1
-g(t), t1 <= t <= t2
+g(t), t0  <= t <= t1
 """ -> 
-function bbb(x0, x1, t0, t2, T)
-        t1 = (t0 + t2)/2 #half point between times
-        b1 = (g(t1,T) - g(t0,T))/(t1 - t0) 
-        a1 = g(t0,T) - x0
-        b2 = (g(t2,T) - g(t1,T))/(t2 - t1)
-        a2 = g(t2,T) - b2*(t2 - t0) - x0
-        return 1 - J(a1, b1, a2, b2, t1 - t0, t2 - t0, x1 - x0)
+function bbb(x0, x1, t0, t1, T)
+    return 1 - exp(-2/(t1-t0)*(g(t1) - x1)*(g(t0)-x0))
 end
 
 @doc """
@@ -161,7 +135,7 @@ h: space step size
 T: Terminal time
 lb: Lower bound for truncation
 """ -> 
-function BCP(n::Int, h, T, lb)
+function BCP(n::Int, h, T = 1, lb = -3)
     if g(T, T) - lb < h
         return 1
     end
