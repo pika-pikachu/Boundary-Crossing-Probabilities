@@ -119,12 +119,24 @@ while 1 == 1
 		bcp_vec[j] = bcp_vec[j]*i/(i+1) +  mult(wiener(j))/(i+1)
 	end
 	if i % 10000 == 0
+		# fitting linear model
+		error_vec = abs.(bcp_vec - ones(n) .* exact_limit())
+		x = log.(1:n)
+		y = log.(error_vec)
+
+		beta_1 = cov(x,y)/var(x)
+		# beta_0 = mean(y) - beta_1*mean(x)
+		beta_0 = y[1] - beta_1*x[1]
+
+		y_fit = exp.( beta_0*ones(n) + beta_1*x )
+
 		plt[:cla]()
 		guideplot(n)
-		plot(1:n, abs.(bcp_vec - ones(n) .* exact_limit()), marker = "o")	
+		plot(1:n, error_vec, marker = "o")	
+		plot(1:n, y_fit)	
 		plt[:pause](0.0001)
+		print("iteration: ", i , " slope: ", beta_1, "\r")
 	end
-	print("iteration: ", i ,"\r")
 	i += 1
 end
 end
