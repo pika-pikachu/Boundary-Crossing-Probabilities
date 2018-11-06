@@ -87,7 +87,7 @@ h: space step size
 T: Terminal time
 lb: Lower bound for truncation
 """ -> 
-function pmatrix0(n::Int, h, T, lb = -3)
+function pmatrix0(n::Int, h, T = 1, lb = -3)
 range = (g(1/n,T)-h/2):(-h):(lb)
 l = length(range)
 lb = range[end]
@@ -110,7 +110,7 @@ h: space step size
 T: Terminal time
 lb: Lower bound for truncation
 """ -> 
-function pmatrix(i::Int, n::Int, h, T, lb = -3)
+function pmatrix(i::Int, n::Int, h, T = 1, lb = -3)
 jrange = (g(i/n,T)-h/2):(-h):(lb) # moving from i to i+1
 krange = (g((i+1)/n,T)-h/2):(-h):(lb)
 lb = krange[length(krange)]
