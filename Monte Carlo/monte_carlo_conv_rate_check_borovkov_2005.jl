@@ -90,35 +90,36 @@ end
 
 
 @doc """
-    dyn_conv_plot(n)
+    dyn_conv_plot(n, N)
 
 Plots convergence dynamically.
 Careful, has an unfinishing monte carlo loop
-dyn_conv_plot(20)
+dyn_conv_plot(4,20)
 """ -> 
-function dyn_conv_plot(n)
+function dyn_conv_plot(n, N)
 i = 1
-bcp_vec= zeros(n)
+n_mesh = unique(floor.(Int,exp.( log(N)*( 0:(1/(n-1)):1 ) ) ) ) # cuts up the x - log axis uniformly to save computation
+bcp_vec = zeros(length(n_mesh))
 while 1 == 1
-	for j in 1:n
-		bcp_vec[j] = bcp_vec[j]*i/(i+1) +  mult(wiener(j))/(i+1)
+	for j in 1:length(n_mesh)
+		bcp_vec[j] = bcp_vec[j]*i/(i+1) +  mult(wiener(n_mesh[j]))/(i+1)
 	end
 	if i % 10000 == 0
 		# fitting linear model
-		error_vec = abs.(bcp_vec - ones(n) .* exact_limit())
-		x = log.(1:n)
+		error_vec = abs.(bcp_vec - ones(length(n_mesh)) .* exact_limit())
+		x = log.(n_mesh)
 		y = log.(error_vec)
 
 		beta_1 = cov(x,y)/var(x)
 		# beta_0 = mean(y) - beta_1*mean(x)
 		beta_0 = y[1] - beta_1*x[1]
 
-		y_fit = exp.( beta_0*ones(n) + beta_1*x )
+		y_fit = exp.( beta_0*ones(N) + beta_1*log.(1:N) )
 
 		plt[:cla]()
-		guideplot(n)
-		plot(1:n, error_vec, marker = "o")	
-		plot(1:n, y_fit)	
+		guideplot(N)
+		plot(n_mesh, error_vec, marker = "o")	
+		plot(1:N, y_fit)	
 		plt[:pause](0.0001)
 		print("iteration: ", i , " slope: ", beta_1, "\r")
 	end
