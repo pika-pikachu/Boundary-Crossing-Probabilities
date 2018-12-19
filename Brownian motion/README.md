@@ -1,5 +1,8 @@
 # File descriptions
 
+convergence_plot.jl
+- Plots the convergence behaviour of the Markov chain approximation of a Brownian boundary crossing probability
+
 integral_equation_loader_deely.jl
 - Using the method of integral equations, returns the approximated probability a Brownian motion trajectory crosses Daniel's boundary
 
@@ -16,6 +19,12 @@ one_sided_daniels_boundary_midpoint_correction_1BBC.jl
 - Contains exact value for comparison
 
 one_sided_daniels_boundary_midpoint_correction_2BBC.jl
+- Uses a two-piece Brownian Bridge Correction (BBC) 
+
+one_sided_linear_boundary_midpoint_correction_1BBC.jl
+- Returns the Markov chain approximated probability a Brownian motion trajectory crosses a linear boundary
+
+one_sided_linear_boundary_midpoint_correction_2BBC.jl
 - Uses a two-piece Brownian Bridge Correction (BBC) 
 
 two_sided_boundary_midpoint_correction.jl
