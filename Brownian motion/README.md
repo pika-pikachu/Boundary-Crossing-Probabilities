@@ -13,7 +13,7 @@ kolmogorov_smirnov_novikov.jl
 
 one_sided_daniels_boundary_midpoint_correction_1BBC.jl
 - Returns the Markov chain approximated probability a Brownian motion trajectory crosses Daniel's boundary
-- Uses a two-piece Brownian Bridge Correction (BBC) 
+- Uses a one-piece Brownian Bridge Correction (BBC) 
 - Uses a midpoint correction for the state space
 - Uses a boundary dependent state space
 - Contains exact value for comparison
