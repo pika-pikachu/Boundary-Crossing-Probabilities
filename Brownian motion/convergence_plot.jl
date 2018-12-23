@@ -5,7 +5,7 @@ using PyPlot
 @doc """
 	guideplot(N, s)
 
-Returns a plot with 4 convergence lines
+Returns a plot with 4 convergence lines n^{-1/2}, n^{-1}, n^{-2}, n^{-4}
 N: Maximum number of boundary partitions
 s: constant scaling
 """ -> 

@@ -73,7 +73,7 @@ end
 Returns the transition probability matrix of the Markov chain approximation of Brownian motion 
 from time 0 to time 1/n
 n: number of time partitions
-h: space step size
+h: space step-size
 T: Terminal time
 lb: Lower bound for truncation
 """ -> 
