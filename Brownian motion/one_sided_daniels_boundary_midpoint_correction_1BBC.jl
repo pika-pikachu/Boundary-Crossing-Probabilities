@@ -32,7 +32,7 @@ function exact_limit(T = 1, theta = 1)
 	b1 = cdf(Normal(0 ,sqrt(T)),g(T,1,theta)) 
 	b2 = a1*cdf(Normal(theta,sqrt(T)),g(T,1,theta)) 
 	b3 = a2*cdf(Normal(2*theta,sqrt(T)),g(T,1,theta)) 
-	return (b1 - (b2 + b3)/a)
+	return 1 - (b1 - (b2 + b3)/a)
 end
 
 @doc """
