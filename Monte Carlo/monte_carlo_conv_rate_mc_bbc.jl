@@ -1,4 +1,4 @@
-using StatsBase  # corrected a typo here
+using StatsBase 
 using Distributions
 using PyPlot
 
@@ -64,7 +64,7 @@ t_vec = 0:(1/n):1
 #	plot(t_vec, X)
 #	mapg = map(g, t_vec)
 #	plot(t_vec, mapg)
-	return mean([prod(vec1), prod(vec2)])
+	return (prod(vec1) + prod(vec2))/2
 end
 
 
@@ -121,4 +121,4 @@ while 1 == 1
 end
 end
 
-dyn_conv_plot(10,1000)
+dyn_conv_plot(10,100)
