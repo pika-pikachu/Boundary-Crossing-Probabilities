@@ -22,18 +22,18 @@ end
 
 
 @doc """
-	converge(n, N)
+	converge(n, N, p)
 
 Returns a convergence plot of the MC approximation towards the true solution
 n: number of equally spaced points
 N: maximum number of boundary partitions
 """ -> 
-function converge(n, N)
+function converge(n, N, p = 1)
 limit = exact_limit()
 n_mesh = unique(floor.(Int,exp.( log(N)*( 0:(1/(n-1)):1 ) ) ) ) # cuts up the x - log axis uniformly to save computation
 bcp_vec = zeros(length(n_mesh))
 for i in 1:length(n_mesh)
-	bcp_vec[i] = abs(BCP(n_mesh[i],1/n_mesh[i]) - limit)
+	bcp_vec[i] = abs(BCP(n_mesh[i],1/n_mesh[i]^p) - limit)
 end
 figure()
 guideplot(N, bcp_vec[1])
