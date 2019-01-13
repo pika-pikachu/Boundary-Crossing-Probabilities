@@ -1,13 +1,12 @@
 using Distributions
 
 @doc """
-	g(s, T = 1 , a = 1, b = 1) 
+	g(t, a = 1, b = 1) 
 
-T is the terminal time of the boundary crossing 
+Linear boundary with intercept a and gradient b g(t) = a + b t
 """ -> 
-function g(s, T = 1, a = 1, b = 1)
-	t = s.*T
-  	return (a + b*t)/sqrt(T)
+function g(t, a = 1, b = 1)
+  	return a + b*t
 end
 
 @doc """
@@ -45,19 +44,19 @@ return J
 end
 
 @doc """
-	bbb(x0, x1, t0, t2, T) 
+	bbb(x0, x1, t0, t2) 
 
 Returns the exact probability that a Brownian bridge starting at x0 and ending at x1 survives 
 a two piecewise linear boundary approximation of g(t):
 g(t), 0  <= t <= t1
 g(t), t1 <= t <= t2
 """ -> 
-function bbb(x0, x1, t0, t2, T)
+function bbb(x0, x1, t0, t2)
         t1 = (t0 + t2)/2 #half point between times
-        b1 = (g(t1,T) - g(t0,T))/(t1 - t0) 
-        a1 = g(t0,T) - x0
-        b2 = (g(t2,T) - g(t1,T))/(t2 - t1)
-        a2 = g(t2,T) - b2*(t2 - t0) - x0
+        b1 = (g(t1) - g(t0))/(t1 - t0) 
+        a1 = g(t0) - x0
+        b2 = (g(t2) - g(t1))/(t2 - t1)
+        a2 = g(t2) - b2*(t2 - t0) - x0
         return 1 - J(a1, b1, a2, b2, t1 - t0, t2 - t0, x1 - x0)
 end
 
@@ -93,24 +92,25 @@ function transprob(x, y, dt, h)
 end
 
 @doc """
-	pmatrix0(n, h, T, lb)
+	pmatrix0(n, h, T, x0, lb)
 
 Returns the transition probability matrix of the Markov chain approximation of Brownian motion 
 from time 0 to time 1/n
 n: number of time partitions
 h: space step size
 T: Terminal time
+x0: Starting position
 lb: Lower bound for truncation
 """ -> 
-function pmatrix0(n::Int, h, T, lb = -3)
-range = (g(1/n,T)-h/2):(-h):(lb)
+function pmatrix0(n::Int, h, T = 1, x0 = 0, lb = -3)
+range = (g(T/n)-h/2):(-h):(lb)
 l = length(range)
 lb = range[end]
 vec = zeros(l)
 	for j = 1:(l-1)
-		vec[j] = bbb(0, range[j], 0, 1/n, T)*transprob(0, range[j], 1/n, h)
+		vec[j] = bbb(x0, range[j], 0, T/n)*transprob(x0, range[j], T/n, h)
 	end
-vec[end] = bbb(0, lb, 0, 1/n, T)*C(0, 1/n, h, lb) 
+vec[end] = bbb(x0, lb, 0, T/n)*C(x0, T/n, h, lb) 
 return vec
 end
 
@@ -125,16 +125,16 @@ h: space step size
 T: Terminal time
 lb: Lower bound for truncation
 """ -> 
-function pmatrix(i::Int, n::Int, h, T, lb = -3)
-jrange = (g(i/n,T)-h/2):(-h):(lb) # moving from i to i+1
-krange = (g((i+1)/n,T)-h/2):(-h):(lb)
+function pmatrix(i::Int, n::Int, h, T = 1, lb = -3)
+jrange = (g(T*i/n)-h/2):(-h):(lb) # moving from i to i+1
+krange = (g(T*(i+1)/n)-h/2):(-h):(lb)
 lb = krange[length(krange)]
 M = zeros(length(jrange),length(krange))
 	for j = 1:(length(jrange)-1)
 		for k = 1:(length(krange)-1)
-				M[j, k] = bbb(jrange[j], krange[k], i/n, (i+1)/n, T)*transprob(jrange[j], krange[k], 1/n, h)
+				M[j, k] = bbb(jrange[j], krange[k], T*i/n, T*(i+1)/n)*transprob(jrange[j], krange[k], T/n, h)
 		end
-		M[j, length(krange)] = bbb(jrange[j], lb, i/n, (i+1)/n, T)*C(jrange[j], 1/n, h, lb)
+		M[j, length(krange)] = bbb(jrange[j], lb, T*i/n, T*(i+1)/n)*C(jrange[j], T/n, h, lb)
 	end
 M[length(jrange), length(krange)] = 1
 return M
@@ -142,19 +142,20 @@ end
 
 
 @doc """
-	BCP(n::Int, h, T, lb)
+	BCP(n::Int, h, T, x0, lb)
 
 Returns the approximated boundary crossing probability
 n: number of time partitions
 h: space step size
 T: Terminal time
+x0: Initial position of Wiener process
 lb: Lower bound for truncation
 """ -> 
-function BCP(n::Int, h, T = 1, lb = -3)
-    if g(T, T) - lb < h
+function BCP(n::Int, h, T = 1, x0 = 0, lb = -3)
+    if (g(T) - lb < h) | (x0 > g(0))
         return 1
     end
-	prob = transpose(pmatrix0(n, h, T, lb))
+	prob = transpose(pmatrix0(n, h, T, x0, lb))
 	for i = 1:(n-1)
 		prob = prob*pmatrix(i, n, h, T, lb)
 	end
