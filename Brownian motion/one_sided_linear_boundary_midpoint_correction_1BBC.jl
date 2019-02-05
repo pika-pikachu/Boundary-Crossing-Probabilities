@@ -106,7 +106,7 @@ lb = krange[length(krange)]
 M = zeros(length(jrange),length(krange))
 	for j = 1:(length(jrange)-1)
 		for k = 1:(length(krange)-1)
-				M[j, k] = bbb(jrange[j], krange[k], T*i/n, T*(i+1)/n)*transprob(jrange[j], krange[k], T/n, h)
+			M[j, k] = bbb(jrange[j], krange[k], T*i/n, T*(i+1)/n)*transprob(jrange[j], krange[k], T/n, h)
 		end
 		M[j, length(krange)] = bbb(jrange[j], lb, T*i/n, T*(i+1)/n)*C(jrange[j], T/n, h, lb)
 	end
