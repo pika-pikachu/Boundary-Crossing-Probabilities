@@ -78,6 +78,25 @@ end
 # plt[:hist](diff_h, bins = 40, density = true, cumulative = true, alpha =0.3)
 # plt[:hist](diff_snap, bins = 40, density = true)
 
+n = 20
+h = 1/n
+
+N = 50000
+xvec = []
+for i in 1:N
+	s = generate(n)
+	push!(xvec, sum(round.((s[1] - s[4])./h).*h .!= 0))
+end
+
+sum(xvec .== 0)/N
+plt[:hist](xvec, bins = 100)
+
+
+for i in 1:1000
+	s = generate(n)
+	plot(round.((s[1] - s[4])./h).*h, color = "black", alpha = 0.01 )
+end
+
 @doc """
 	mc(n, N, replace = true, path = true) 
 
@@ -148,13 +167,65 @@ t_vec = 0:(1/n):1
 			vec2[i] = 0
 		end
 	end
-	if antithetic = true
+	if antithetic == true
 		return (prod(vec1) + prod(vec2))/2
 	else 
 		return prod(vec1)
 	end
-
 end
+
+
+n = 20
+B = 100000
+x1 = [0.0]
+x2 = [0.0]
+x3 = [0.0]
+x4 = [0.0]
+for i in 1:B
+	s = generate(n)
+	push!(x1, mult(s[1]))
+	push!(x2, mult(s[2]))
+	push!(x3, mult(s[3]))
+	push!(x4, mult(s[4]))
+end
+
+# plot(x1 - x2, ls = "--", color = "red", label = "MC")
+# plot(ones(length(x2))*mean(x1 - x2), ls = "--", color = "red")
+
+# plot(x4 - x2, ls = "--", color = "green", label = "Incr snap")
+# plot(ones(length(x2))*mean(x4 - x2), ls = "--", color = "green")
+
+# plot(x3 - x2, ls = "--", color = "green", label = "Incr snap")
+
+figure()
+plot(x1 - x2, ls = "--", color = "red", label = "MC")
+plot(x3 - x2, ls = "--", color = "blue", label = "snap")
+
+plot(x1 - x4, ls = "--", color = "blue", label = "diff")
+sum(x1 - x4 .== 0)/length(x1)
+
+
+figure()
+plot(ones(length(x1))*mean(x1), color = "red")
+plot(ones(length(x3))*mean(x3), color = "blue")
+plot(ones(length(x4))*mean(x4), color = "green")
+plot(ones(length(x2))*mean(x2), color = "black")
+
+#plot(x3 - x2, ls = "--", color = "blue", label = "Snap")
+
+#plot(ones(length(x2))*(maximum(abs.(x1 - x2))), ls = "--", color = "red")
+
+#plot(-ones(length(x2))*(maximum(abs.(x1 - x2))), ls = "--", color = "red")
+
+
+#plot(ones(length(x2))*(maximum(abs.(x3 - x2))), ls = "--", color = "blue")
+#plot(ones(length(x2))*mean(x3 - x2), ls = "--", color = "blue")
+#plot(-ones(length(x2))*(maximum(abs.(x3 - x2))), ls = "--", color = "blue")
+
+
+#plot(ones(length(x2))*(maximum(abs.(x4 - x2))))
+
+#plot(-ones(length(x2))*(maximum(abs.(x4 - x2))))
 
 
 function guideplot(N, s = 0.05)
