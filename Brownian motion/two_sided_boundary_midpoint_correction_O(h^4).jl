@@ -119,7 +119,7 @@ end
 function pmatrix_end(n::Int, h)
 # h2 = 3/n^2 
 h2 = 3/n^(9/4) 
-m1 = ceil(Int64, (gU((n-1)/n) - gL((n-1)/n))/h)
+m1 = ceil(Int64, (gU((n-1)/n) - gL((n-1)/n))*n)
 m2 = ceil(Int64, (gU(1) - gL(1))/h2)
 jrange = range( gU((n-1)/n) - h/2, stop = gL((n-1)/n) + h/2, length = m1) # moving from i to i+1
 krange = range( gU(1) - h2/2, stop = gL(1) + h2/2, length = m2) # moving from i to i+1
