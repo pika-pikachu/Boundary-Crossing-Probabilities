@@ -127,7 +127,7 @@ end
 
 
 function pmatrix_end(n::Int, h, T = 1, lb = -3)
-h2 = h
+h2 = 3/n^2
 jrange = (g(T*(n-1)/n)-h/2):(-h):(lb) 
 krange = (g(T)-h2/2):(-h2):(lb)
 lb = krange[length(krange)]
@@ -136,7 +136,8 @@ M = zeros(length(jrange),length(krange))
 		for k = 1:(length(krange)-1)
 			M[j, k] = bbb(jrange[j], krange[k], T*(n-1)/n, T)*transprob(jrange[j], krange[k], T/n, h2)
 		end
-		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T*n)*C(jrange[j], T/n, h2, lb)
+		# M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*C(jrange[j], T/n, h2, lb)
+		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*cdf(Normal(jrange[j], sqrt(T/n)), lb)
 	end
 M[length(jrange), length(krange)] = 1
 return M
@@ -162,12 +163,13 @@ function BCP(n::Int, h, T = 1, x0 = 0, lb = -3, c = 1)
 			prob = prob*pmatrix(i, n, c*h, T, lb)
 		end
 		return 1 - (sum(prob))
-    end
-	prob = transpose(pmatrix0(n, c*h, T, x0, lb))
-	for i = 1:(n-2)
-		prob = prob*pmatrix(i, n, c*h, T, lb)
-	end
+    else
+		prob = transpose(pmatrix0(n, c*h, T, x0, lb))
+		for i = 1:(n-2)
+			prob = prob*pmatrix(i, n, c*h, T, lb)
+		end
 		prob = prob*pmatrix_end(n, c*h, T, lb)
+	end
 	return 1 - (sum(prob))
 end
 
