@@ -117,6 +117,7 @@ end
 
 function pmatrix_end(n::Int, h, T = 1, lb = -3)
 h2 = 3/n^2 
+# h2 = 3/n^(9/4)
 jrange = (g(T*(n-1)/n)-h/2):(-h):(lb) # moving from i to i+1
 krange = (g(T)-h2/2):(-h2):(lb)
 lb = krange[length(krange)]
@@ -125,7 +126,7 @@ M = zeros(length(jrange),length(krange))
 		for k = 1:(length(krange)-1)
 			M[j, k] = bbb(jrange[j], krange[k], T*(n-1)/n, T)*transprob(jrange[j], krange[k], T/n, h2)
 		end
-		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T*n)*C(jrange[j], T/n, h2, lb)
+		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*C(jrange[j], T/n, h2, lb)
 	end
 M[length(jrange), length(krange)] = 1
 return M
