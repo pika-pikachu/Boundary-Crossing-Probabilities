@@ -127,7 +127,7 @@ end
 
 
 function pmatrix_end(n::Int, h, T = 1, lb = -3)
-h2 = 3/n^2
+h2 = 1/n
 jrange = (g(T*(n-1)/n)-h/2):(-h):(lb) 
 krange = (g(T)-h2/2):(-h2):(lb)
 lb = krange[length(krange)]
@@ -136,8 +136,8 @@ M = zeros(length(jrange),length(krange))
 		for k = 1:(length(krange)-1)
 			M[j, k] = bbb(jrange[j], krange[k], T*(n-1)/n, T)*transprob(jrange[j], krange[k], T/n, h2)
 		end
-		# M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*C(jrange[j], T/n, h2, lb)
-		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*cdf(Normal(jrange[j], sqrt(T/n)), lb)
+		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*C(jrange[j], T/n, h2, lb)
+		# M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*cdf(Normal(jrange[j], sqrt(T/n)), lb)
 	end
 M[length(jrange), length(krange)] = 1
 return M
@@ -148,10 +148,12 @@ end
 
 Returns the approximated boundary crossing probability
 n: number of time partitions
-h: space step size
+h: space step size (set h(n) = n^-0.52 for a good time)
 T: Terminal time
 x0: Initial position of Wiener process
 lb: Lower bound for truncation
+
+
 """ -> 
 function BCP(n::Int, h, T = 1, x0 = 0, lb = -3, c = 1)
     if (g(T) - lb < c*h) | (x0 > g(0))
