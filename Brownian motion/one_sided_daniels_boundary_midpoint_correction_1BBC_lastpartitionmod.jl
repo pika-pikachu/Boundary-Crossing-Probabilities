@@ -152,8 +152,6 @@ h: space step size (set h(n) = n^-0.52 for a good time)
 T: Terminal time
 x0: Initial position of Wiener process
 lb: Lower bound for truncation
-
-
 """ -> 
 function BCP(n::Int, h, T = 1, x0 = 0, lb = -3, c = 1)
     if (g(T) - lb < c*h) | (x0 > g(0))
