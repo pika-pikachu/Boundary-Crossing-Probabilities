@@ -143,7 +143,7 @@ end
 
 function pmatrix_end(n::Int, m::Int, t)
     h = (gU(t[n-1]) - gL(t[n-1]))/m
-    h2 = 3/n^2 
+    h2 = 1/n 
     m2 = ceil(Int64, (gU(1) - gL(1))/h2)
     jrange = range( gU(t[n-1]) - h/2, stop = gL(t[n-1]) + h/2, length = m) # moving from i to i+1
     krange = range( gU(1) - h2/2, stop = gL(1) + h2/2, length = m2) # moving from i to i+1
@@ -206,10 +206,10 @@ q: increment of error powers. E = sum_{i=1}^n a_i h^{p + i q}
 
 @time RichardsonExtrap(3,3,32)
 """ -> 
-function RichardsonExtrap(a, N, burnin = 32, p = 2, q = 2)
+function RichardsonExtrap(N, a = 4, burnin = 32, p = 2, q = 2)
 M = zeros(N, N)
     function A(n)
-        return BCP(a*n, n)
+        return BCP(n, floor(Int, a*n^0.53))
     end
 M[1, 1] = A(2^0+burnin)
 for j = 2:N
@@ -223,3 +223,54 @@ end
 
  
 
+using PyPlot
+# using PyCall
+# @pyimport matplotlib.patches as patch
+
+@doc """
+    guideplot(N, s)
+
+Returns a plot with 4 convergence lines n^{-1/2}, n^{-1}, n^{-2}, n^{-4}
+N: Maximum number of boundary partitions
+s: constant scaling
+""" -> 
+function guideplot(N, s = 0.05)
+    plt[:xscale]("log")
+    plt[:yscale]("log")
+    grid("on", lw = 0.5)
+    plot(1:N, 1 ./((1:N).^0.5)*s, label = L"$1/\sqrt{n}$", ls = "--", color = "black")
+    plot(1:N, 1 ./(1:N)*s, label = L"1/n", ls = "--", color = "black")
+    plot(1:N, 1 ./((1:N).^1.5)*s, label = L"1/n^1.5", ls = "--", color = "black")
+    plot(1:N, 1 ./((1:N).^2)*s, label = L"1/n^2", ls = "--", color = "black")
+    plot(1:N, 1 ./((1:N).^3.5)*s, label = L"1/n^3.5", ls=  "--", color = "black")
+    plot(1:N, 1 ./((1:N).^4)*s, label = L"1/n^4", ls=  "--", color = "black")
+    xticks(unique(vcat(1:10, 10:10:100)))
+end
+
+
+@doc """
+    converge(n, N, p, T, x0, lb)
+
+Returns a convergence plot of the MC approximation towards the true solution
+n: number of equally spaced points
+N: maximum number of boundary partitions
+
+converge(10,100,1,1,0,-3,6)
+""" -> 
+function converge(n, N, p = 1, T = 1, x0 = 0, lb = -3, γ = 1, lb2 = -4, lb_trans = 10^6)
+limit = exact_limit()
+n_mesh = unique(floor.(Int,exp.( log(N)*( 0:(1/(n-1)):1 ) ) ) ) # cuts up the x -l og axis uniformly to save computation
+bcp_vec = zeros(length(n_mesh))
+for i in 1:length(n_mesh)
+    if i > lb_trans
+        lb = lb2
+    end
+    bcp_vec[i] = abs(BCP(n_mesh[i], γ*floor(Int, sqrt(10*n_mesh[i])), T, x0, lb) - limit)
+end
+figure()
+guideplot(N, bcp_vec[1])
+plot(n_mesh, bcp_vec, marker="o")
+xlabel("n")
+ylabel(L"|P_n - P|")
+title(L"Error, $|P - P_n|$")
+end
