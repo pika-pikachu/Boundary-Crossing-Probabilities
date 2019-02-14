@@ -5,7 +5,7 @@ using Distributions
 
 Linear boundary with intercept a and gradient b g(t) = a + b t
 """ -> 
-function g(t, a = 0.5, b = 0.25)
+function g(t, a = 2, b = 0.11)
   	return a + b*t
 end
 
@@ -14,7 +14,7 @@ end
 
 Returns the exact probability that a Brownian motion crosses a linear boundary a + bt
 """ -> 
-function exact_limit(T = 1, a = 0.5, b = 0.25)
+function exact_limit(T = 1, a = 2, b = 0.111)
 	if T == 0 
 	  return 0
 	end
@@ -114,19 +114,28 @@ M[length(jrange), length(krange)] = 1
 return M
 end
 
+@doc """
+	pmatrix_end_minus_one(i, n, h, T, lb)
 
-function pmatrix_end(n::Int, h, T = 1, lb = -3)
-h2 = 3/n^2 
-# h2 = 3/n^(9/4)
-jrange = (g(T*(n-1)/n)-h/2):(-h):(lb) # moving from i to i+1
-krange = (g(T)-h2/2):(-h2):(lb)
+Returns the transition probability matrix of the Markov chain approximation of Brownian motion
+from time i/n to time (i+1)/n
+i: ith time partition 
+n: number of time partitions
+h: space step size
+T: Terminal time
+lb: Lower bound for truncation
+""" -> 
+function pmatrix_end_minus_one(n::Int, h, d, T = 1, lb = -3)
+jrange = (g(T*(n-2)/n)-h/2):(-h):(lb) # moving from n-2 to n-1
+krange = (g(T*(n-1)/n)-h/2):(-h):(lb)
 lb = krange[length(krange)]
 M = zeros(length(jrange),length(krange))
 	for j = 1:(length(jrange)-1)
 		for k = 1:(length(krange)-1)
-			M[j, k] = bbb(jrange[j], krange[k], T*(n-1)/n, T)*transprob(jrange[j], krange[k], T/n, h2)
+			M[j, k] = n^(d)*bbb(jrange[j], krange[k], T*(n-2)/n, T*(n-1)/n)*transprob(jrange[j], krange[k], T/n, h)*(g(T*(n-1)/n)-krange[k])*
+			sqrt(n/2/pi)*exp(-n/2*(krange[k] - g(1))^2)
 		end
-		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*C(jrange[j], T/n, h2, lb)
+		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-2)/n, T*(n-1)/n)*C(jrange[j], T/n, h, lb)
 	end
 M[length(jrange), length(krange)] = 1
 return M
@@ -142,22 +151,76 @@ T: Terminal time
 x0: Initial position of Wiener process
 lb: Lower bound for truncation
 """ -> 
-function BCP(n::Int, h, T = 1, x0 = 0, lb = -3, c = 1)
-    if (g(T) - lb < c*h) | (x0 > g(0))
+function BCP(n::Int, h, d, T = 1, x0 = 0, lb = -3)
+    if (g(T) - lb < h) | (x0 > g(0))
         return 1
     end
-    if n == 1
-    	prob = transpose(pmatrix0(n, c*h, T, x0, lb))
-		for i = 1:(n-1)
-			prob = prob*pmatrix(i, n, c*h, T, lb)
-		end
-		return 1 - (sum(prob))
-    end
-	prob = transpose(pmatrix0(n, c*h, T, x0, lb))
-	for i = 1:(n-2)
-		prob = prob*pmatrix(i, n, c*h, T, lb)
+	prob = transpose(pmatrix0(n, h, T, x0, lb))
+	for i = 1:(n-3)
+		prob = prob*pmatrix(i, n, h, T, lb)
 	end
-		prob = prob*pmatrix_end(n, c*h, T, lb)
-	return 1 - (sum(prob))
+		prob = prob*pmatrix_end_minus_one(n, h, d, T, lb)
+	return sum(prob)
 end
 
+
+
+
+
+using PyPlot
+# using PyCall
+# @pyimport matplotlib.patches as patch
+
+@doc """
+	guideplot(N, s)
+
+Returns a plot with 4 convergence lines n^{-1/2}, n^{-1}, n^{-2}, n^{-4}
+N: Maximum number of boundary partitions
+s: constant scaling
+""" -> 
+function guideplot(N, s = 0.05)
+	plt[:xscale]("log")
+	plt[:yscale]("log")
+	grid("on", lw = 0.5)
+	plot(1:N, 1 ./((1:N).^0.5)*s, label = L"$1/\sqrt{n}$", ls = "--", color = "black")
+	plot(1:N, 1 ./(1:N)*s, label = L"1/n", ls = "--", color = "black")
+	plot(1:N, 1 ./((1:N).^1.5)*s, label = L"1/n^2", ls = "--", color = "black")
+	plot(1:N, 1 ./((1:N).^2)*s, label = L"1/n^2", ls = "--", color = "black")
+	plot(1:N, 1 ./((1:N).^3.5)*s, label = L"1/n^3.5", ls=  "--", color = "black")
+	plot(1:N, 1 ./((1:N).^4)*s, label = L"1/n^4", ls=  "--", color = "black")
+	xticks(unique(vcat(1:10, 10:10:100)))
+end
+
+
+@doc """
+	converge(n, N, p, T, x0, lb)
+
+Returns a convergence plot of the MC approximation towards the true solution
+n: number of equally spaced points
+N: maximum number of boundary partitions
+
+converge(10,100,1,1,0,-3,6)
+converge(10,30,1/2)
+""" -> 
+function converge(n, N, p, d, m,T = 1, x0 = 0, lb = -3, γ = 1, lb2 = -4, lb_trans = 10^6)
+n_mesh = 1:m:N
+bcp_vec = zeros(length(n_mesh))
+bcp_vec[1] = 1
+ratio = zeros(length(n_mesh))
+for i in 2:length(n_mesh)
+	if i > lb_trans
+		lb = lb2
+	end
+	bcp_vec[i] = abs(BCP(n_mesh[i], γ/n_mesh[i]^p, d, T, x0, lb))
+	ratio[i] = bcp_vec[i]/bcp_vec[i-1]
+end
+figure()
+# guideplot(N, bcp_vec[1])
+# plt[:xscale]("log")
+# plt[:yscale]("log")
+plot(n_mesh[2:end], bcp_vec[2:end], marker="o")
+xlabel("n")
+# ylabel(L"|P_n - P|")
+# title(L"Error, $|P - P_n|$")
+return ratio
+end

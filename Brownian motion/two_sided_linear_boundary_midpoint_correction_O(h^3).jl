@@ -4,49 +4,35 @@ using Distributions
     gU(t)
 
 Upper boundary. 
-Reference: Lerche. H, "Boundary Crossing of Brownian motion
-Its Relation to the Law of the Iterated Logarithm and to Sequential Analysis"
-Chapter I Example 3 p28 (1986)
 """ -> 
-function gU(t, a=2, theta =3)
-    if t <= 0.00634616586979
-        return theta/2
-    else
-        return t/theta*acosh(a*exp(theta^2/(2t)))
-    end
+function gU(t, c = 1, d = 0.2, μ = 0)
+    return c + (d-μ)*t
 end
 
 @doc """
     gL(t)
 
 Lower boundary.
-Reference: Lerche. H, "Boundary Crossing of Brownian motion
-Its Relation to the Law of the Iterated Logarithm and to Sequential Analysis"
-Chapter I Example 3 p28 (1986)
 """ -> 
-function gL(t, a=2, theta = 3)
-    if t <= 0.00634616586979
-        return -theta/2
-    else
-        return -t/theta*acosh(a*exp(theta^2/(2t)))
-    end
+function gL(t, c = 1, d = 0.2, μ = 0)
+    return -c + (-d - μ)*t
 end
+
+Phi(x) = cdf(Normal(),x)
 
 @doc """
     exact_limit(a = 2 , theta = 3) 
 Returns the exact probability that a Brownian motion crosses the two sided boundary gU and gL
-Reference: Lerche. H, "Boundary Crossing of Brownian motion
-Its Relation to the Law of the Iterated Logarithm and to Sequential Analysis"
-Chapter I Example 3 p28 (1986)
 """ -> 
-function exact_limit(a = 2 , theta = 3,T=1, eps = 1/100)
-if T < eps
-    return 1
+function exact_limit(c = 1, d = 0.2, μ = 0, smax = 10, T = 1)
+x = 0
+s = 1
+while s <= smax
+	x += (-1)^(s+1)*exp(-2*s^2*c*d +2*s*c*μ)*(Phi( ((μ + d)*T + (2*s + 1)*c)/sqrt(T) ) - Phi( ((μ - d)*T + (2*s - 1)*c)/sqrt(T) )) +
+	 (-1)^(-s+1)*exp(-2*s^2*c*d -2*s*c*μ)*(Phi( ((μ + d)*T + (-2*s + 1)*c)/sqrt(T) ) - Phi( ((μ - d)*T + (-2*s - 1)*c)/sqrt(T) ))
+	s += 1
 end
-b1 = cdf(Normal(0,     sqrt(T)),gU(T)) - cdf(Normal(0,     sqrt(T)),gL(T))
-b2 = cdf(Normal(theta ,sqrt(T)),gU(T)) - cdf(Normal(theta, sqrt(T)),gL(T))
-b3 = cdf(Normal(-theta,sqrt(T)),gU(T)) - cdf(Normal(-theta,sqrt(T)),gL(T))
-return 1 - (b1 - (b2 + b3)/2/a)
+return 1 + x - Phi( ((μ + d)*T + c )/sqrt(T) ) + Phi( ((μ - d)*T - c )/sqrt(T) )
 end
 
 
@@ -117,8 +103,9 @@ end
 
 
 function pmatrix_end(n::Int, h)
-# h2 = 3/n^2 
-h2 = 3/n^(9/4) 
+# h2 = 1/n^(10/4)
+h2 = 3/n^2 
+# h2 = 3/n^(9/4) 
 m1 = ceil(Int64, (gU((n-1)/n) - gL((n-1)/n))*n)
 m2 = ceil(Int64, (gU(1) - gL(1))/h2)
 jrange = range( gU((n-1)/n) - h/2, stop = gL((n-1)/n) + h/2, length = m1) # moving from i to i+1
@@ -145,7 +132,7 @@ x0: Initial position of Wiener process
 lb: Lower bound for truncation
 """ -> 
 function BCP(n::Int, h, c = 1)
-    if (gU(1) - gL(1) < c*h) 
+    if (gU(0) - gL(0) < c*h) 
         return 1
     end
     if n == 1
@@ -173,7 +160,7 @@ using PyPlot
 @doc """
     guideplot(N, s)
 
-Returns a plot with 4 convergence lines n^{-1/2}, n^{-1}, n^{-2}, n^{-4}
+Returns a plot with convergence lines 
 N: Maximum number of boundary partitions
 s: constant scaling
 """ -> 
@@ -184,6 +171,8 @@ function guideplot(N, s = 0.05)
     plot(1:N, 1 ./((1:N).^0.5)*s, label = L"$1/\sqrt{n}$", ls = "--", color = "black")
     plot(1:N, 1 ./(1:N)*s, label = L"1/n", ls = "--", color = "black")
     plot(1:N, 1 ./((1:N).^2)*s, label = L"1/n^2", ls = "--", color = "black")
+    plot(1:N, 1 ./((1:N).^2.5)*s, label = L"1/n^2.5", ls = "--", color = "black")
+    plot(1:N, 1 ./((1:N).^3)*s, label = L"1/n^3", ls=  "--", color = "black")
     plot(1:N, 1 ./((1:N).^3.5)*s, label = L"1/n^3.5", ls=  "--", color = "black")
     plot(1:N, 1 ./((1:N).^4)*s, label = L"1/n^4", ls=  "--", color = "black")
     xticks(unique(vcat(1:10, 10:10:100)))
@@ -201,7 +190,7 @@ converge(10,250)
 """ -> 
 function converge(n, N, p = 1, γ = 1)
 limit = exact_limit()
-n_mesh = unique(floor.(Int,exp.( log(N)*( 0:(1/(n-1)):1 ) ) ) ) # cuts up the x -l og axis uniformly to save computation
+n_mesh = unique(floor.(Int,exp.( log(N)*( 0:(1/(n-1)):1 ) ) ) ) # cuts up the x -log axis uniformly to save computation
 bcp_vec = zeros(length(n_mesh))
 for i in 1:length(n_mesh)
     bcp_vec[i] = abs(BCP(n_mesh[i], γ/n_mesh[i]^p) - limit)
