@@ -5,7 +5,7 @@ using Distributions
 
 Linear boundary with intercept a and gradient b g(t) = a + b t
 """ -> 
-function g(t, a = 1, b = 1)
+function g(t, a = 3, b = pi/2)
   	return a + b*t
 end
 
@@ -14,7 +14,7 @@ end
 
 Returns the exact probability that a Brownian motion crosses a linear boundary a + bt
 """ -> 
-function exact_limit(T = 1, a = 1, b = 1)
+function exact_limit(T = 1, a = 3, b = pi/2)
 	if T == 0 
 	  return 0
 	end

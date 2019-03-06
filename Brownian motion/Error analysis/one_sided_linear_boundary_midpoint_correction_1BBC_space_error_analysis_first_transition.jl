@@ -5,7 +5,7 @@ using Distributions
 
 Linear boundary with intercept a and gradient b g(t) = a + b t
 """ -> 
-function g(t, a = 0.5, b = 0)
+function g(t, a = 0.5, b = 1)
   	return a + b*t
 end
 
@@ -14,7 +14,7 @@ end
 
 Returns the exact probability that a Brownian motion crosses a linear boundary a + bt
 """ -> 
-function exact_limit(T = 1, a = 0.5, b = 0)
+function exact_limit(T = 1, a = 0.5, b = 1)
 	if T == 0 
 	  return 0
 	end
@@ -77,16 +77,35 @@ x0: Starting position
 lb: Lower bound for truncation
 """ -> 
 function pmatrix0(n::Int, h, T = 1, x0 = 0, lb = -3)
-range = (g(T/n)-h/2):(-h):(lb)
+h0 = 1/n^(2/3)
+range = (g(T/n)-h0/2):(-h0):(lb)
 l = length(range)
 lb = range[end]
 vec = zeros(l)
 	for j = 1:(l-1)
-		vec[j] = bbb(x0, range[j], 0, T/n)*transprob(x0, range[j], T/n, h)
+		vec[j] = bbb(x0, range[j], 0, T/n)*transprob(x0, range[j], T/n, h0)
 	end
-vec[end] = bbb(x0, lb, 0, T/n)*C(x0, T/n, h, lb) 
+vec[end] = bbb(x0, lb, 0, T/n)*C(x0, T/n, h0, lb) 
 return vec
 end
+
+
+function pmatrix1(n::Int, h, T = 1, lb = -3)
+h0 = 1/n^(2/3)
+jrange = (g(T/n)-h0/2):(-h0):(lb) # moving from 1 to 2
+krange = (g(T*2/n)-h/2):(-h):(lb)
+lb = krange[length(krange)]
+M = zeros(length(jrange),length(krange))
+	for j = 1:(length(jrange)-1)
+		for k = 1:(length(krange)-1)
+			M[j, k] = bbb(jrange[j], krange[k], T*1/n, T*2/n)*transprob(jrange[j], krange[k], T/n, h)
+		end
+		M[j, length(krange)] = bbb(jrange[j], lb, T*1/n, T*2/n)*C(jrange[j], T/n, h, lb)
+	end
+M[length(jrange), length(krange)] = 1
+return M
+end
+
 
 @doc """
 	pmatrix(i, n, h, T, lb)
@@ -116,7 +135,7 @@ end
 
 
 function pmatrix_end(n::Int, h, T = 1, lb = -3)
-h2 = 3/n^2 
+h2 = 3/n^3
 # h2 = 3/n^(9/4)
 jrange = (g(T*(n-1)/n)-h/2):(-h):(lb) # moving from i to i+1
 krange = (g(T)-h2/2):(-h2):(lb)
@@ -146,15 +165,12 @@ function BCP(n::Int, h, T = 1, x0 = 0, lb = -3, c = 1)
     if (g(T) - lb < c*h) | (x0 > g(0))
         return 1
     end
-    if n == 1
-    	prob = transpose(pmatrix0(n, c*h, T, x0, lb))
-		for i = 1:(n-1)
-			prob = prob*pmatrix(i, n, c*h, T, lb)
-		end
-		return 1 - (sum(prob))
+    if n <= 2
+		return 0.5
     end
 	prob = transpose(pmatrix0(n, c*h, T, x0, lb))
-	for i = 1:(n-2)
+	prob = prob*pmatrix1(n, c*h, T, lb)
+	for i = 2:(n-2)
 		prob = prob*pmatrix(i, n, c*h, T, lb)
 	end
 		prob = prob*pmatrix_end(n, c*h, T, lb)

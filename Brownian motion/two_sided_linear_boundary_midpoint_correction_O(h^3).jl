@@ -5,7 +5,7 @@ using Distributions
 
 Upper boundary. 
 """ -> 
-function gU(t, c = 1, d = 0.2, μ = 0)
+function gU(t, c = 1, d = 0, μ = 0)
     return c + (d-μ)*t
 end
 
@@ -14,7 +14,7 @@ end
 
 Lower boundary.
 """ -> 
-function gL(t, c = 1, d = 0.2, μ = 0)
+function gL(t, c = 1, d = 0, μ = 0)
     return -c + (-d - μ)*t
 end
 
@@ -22,9 +22,10 @@ Phi(x) = cdf(Normal(),x)
 
 @doc """
     exact_limit(a = 2 , theta = 3) 
-Returns the exact probability that a Brownian motion crosses the two sided boundary gU and gL
+Returns the exact probability that a Brownian motion crosses the two sided boundary gU and gL. 
+Reference: Anderson T.W (1959) A MODIFICATION OF THE SEQUENTIAL PROBABILITY RATIO TEST TO REDUCE THE SAMPLE SIZE, pg. 186 equation (4.59)
 """ -> 
-function exact_limit(c = 1, d = 0.2, μ = 0, smax = 10, T = 1)
+function exact_limit(c = 1, d = 0, μ = 0, smax = 10, T = 1)
 x = 0
 s = 1
 while s <= smax
