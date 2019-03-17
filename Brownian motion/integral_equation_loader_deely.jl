@@ -43,22 +43,22 @@ else
 end
 end
 
-t0 = 0
-N = 1000
-t_vec = range(t0; stop = 1, length = N)
-vector = zeros(N)
-for i in 1:N
-	vector[i] = g(t_vec[i], 0, t0, 3) 
-end
+# t0 = 0
+# N = 1000
+# t_vec = range(t0; stop = 1, length = N)
+# vector = zeros(N)
+# for i in 1:N
+# 	vector[i] = g(t_vec[i], 0, t0, 3) 
+# end
 
-plot(t_vec, vector)
+# plot(t_vec, vector)
 
 function K_gen(N, n = 0, T = 1, x0 = 0, t0 = 0)
 h = (T-t0)/N
 K = zeros(N,N)
 function b(t)
-	#return (g(t,x0,n) - g(t0,x0,n))/(t-t0)
-	return 0
+	return (g(t,x0,n) - g(t0,x0,n))/(t-t0)
+	# return 0
 end
 for j = 1:N
 	for i = 1:j
@@ -77,8 +77,8 @@ function F_vec(N, n = 0, T = 1, x0 = 0, t0 = 0)
 h = (T-t0)/N
 F = zeros(N)
 function b(t)
-	#return (g(t,x0,n) - g(t0,x0,n))/(t-t0)
-	return 0
+	return (g(t,x0,n) - g(t0,x0,n))/(t-t0)
+	# return 0
 end
 for i = 1:N
 	t = i*h
