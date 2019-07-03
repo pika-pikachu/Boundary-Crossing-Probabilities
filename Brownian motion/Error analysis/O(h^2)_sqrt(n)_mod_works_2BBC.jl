@@ -1,3 +1,11 @@
+###############################################################
+# Markov chain approximation of BM for boundary crossing probabilities
+#
+#
+# Bugs:
+# - Grids are relative to x0 = 0, convergence is not guaranteed otherwise.
+###############################################################
+
 using Distributions
 
 @doc """
@@ -34,16 +42,56 @@ function exact_limit(T = 1, theta = 1)
 	return 1 - (b1 - (b2 + b3)/a)
 end
 
+
+# @doc """
+# 	bbb(x0, x1, t0, t1) 
+
+# Returns the exact probability that a Brownian bridge starting at x0 and ending at x1 survives 
+# a two piecewise linear boundary approximation of g(t):
+# g(t), t0  <= t <= t1
+# """ -> 
+# function bbb(x0, x1, t0, t1)
+#     return 1 - exp(-2/(t1-t0)*(g(t1) - x1)*(g(t0) - x0))
+# end
+
+
 @doc """
-	bbb(x0, x1, t0, t1) 
+	J(a1, b1, a2, b2, t1, t2, x)
+
+Returns the exact probability that a Brownian bridge crosses two piecewise linear boundary:
+a1 + b1 t, 0 <= t <= t1
+a2 + b2 t, t1 <= t <= t2
+""" -> 
+function J(a1, b1, a2, b2, t1, t2, x)
+h = (a1 + b1*t1)/t1 - x/t2
+T = sqrt(t2*t1/(t2-t1))
+a2d = b2 + (a2 - x)/t2
+a1d = a1*(b1 + (a1 - x)/t2)
+J = 1 - cdf(Normal(),h*T) + exp(-2*a2*a2d)*
+    cdf(Normal(), (h - 2*a2d)*T ) +
+    exp(-2*a1d)* cdf(Normal(), h*T - 2*a1/T) -
+    exp(-2*a1d + (4*a1- 2*a2)*a2d )*
+    cdf(Normal(), (h - 2*a2d)*T - 2*a1/T )
+return J
+end
+
+@doc """
+	bbb(x0, x1, t0, t2) 
 
 Returns the exact probability that a Brownian bridge starting at x0 and ending at x1 survives 
 a two piecewise linear boundary approximation of g(t):
-g(t), t0  <= t <= t1
+g(t), 0  <= t <= t1
+g(t), t1 <= t <= t2
 """ -> 
-function bbb(x0, x1, t0, t1)
-    return 1 - exp(-2/(t1-t0)*(g(t1) - x1)*(g(t0) - x0))
+function bbb(x0, x1, t0, t2)
+        t1 = (t0 + t2)/2 #half point between times
+        b1 = (g(t1) - g(t0))/(t1 - t0) 
+        a1 = g(t0) - x0
+        b2 = (g(t2) - g(t1))/(t2 - t1)
+        a2 = g(t2) - b2*(t2 - t0) - x0
+        return 1 - J(a1, b1, a2, b2, t1 - t0, t2 - t0, x1 - x0)
 end
+
 
 @doc """
 	C(x, dt, h, lb)
@@ -63,6 +111,7 @@ end
 return sum(vec)
 end
 
+
 @doc """
 	transprob(x, y, dt, h)
 
@@ -76,6 +125,31 @@ function transprob(x, y, dt, h)
 	return exp(-(y-x)^2/(2*dt))/sqrt(2*pi*dt)*h
 end
 
+
+@doc """
+	constC(x, n, h, T)
+
+Returns the normalising constant for the transition of BM
+from for starting position x 
+
+x: starting position
+n: number of time partitions
+h: space step size
+T: Terminal time
+""" -> 
+function constC(x, n, h, T=1)
+range1 = 0:h:5
+range2 = (-h):(-h):(-5-h)
+vec1 = zeros(length(range1))
+vec2 = zeros(length(range2))
+	for i in 1:length(range1)
+		vec1[i] = exp(-n*(range1[i]-x)^2/2)*sqrt(n/2/pi)*h
+		vec2[i] = exp(-n*(range2[i]-x)^2/2)*sqrt(n/2/pi)*h
+	end
+return sum(vec1) + sum(vec2)
+end
+
+
 @doc """
 	pmatrix0(n, h, T, x0, lb)
 
@@ -88,16 +162,19 @@ x0: Starting position
 lb: Lower bound for truncation
 """ -> 
 function pmatrix0(n::Int, h, T = 1, x0 = 0, lb = -3)
-range = (g(T/n)-h/2):(-h):(lb)
-l = length(range)
-lb = range[end]
-vec = zeros(l)
-	for j = 1:(l-1)
-		vec[j] = bbb(x0, range[j], 0, T/n)*transprob(x0, range[j], T/n, h)
+hk = g(T/n)/floor(1/h) # boundary dependent spacing to ensure that the mean transition is zero
+krange = g(T/n):(-hk):(lb) # boundary dependent mesh
+l = length(krange)
+lb = krange[end] # boundary dependent lower boundary
+p_vec = zeros(l) 
+c0 = constC(0, n, hk, T)
+	for k = 1:(l-1)
+		p_vec[k] = bbb(x0, krange[k], 0, T/n)*transprob(x0, krange[k], T/n, hk)/c0
 	end
-vec[end] = bbb(x0, lb, 0, T/n)*C(x0, T/n, h, lb) 
-return vec
+p_vec[end] = bbb(x0, lb, 0, T/n)*C(x0, T/n, hk, lb)/c0
+return p_vec
 end
+
 
 @doc """
 	pmatrix(i, n, h, T, lb)
@@ -111,49 +188,65 @@ T: Terminal time
 lb: Lower bound for truncation
 """ -> 
 function pmatrix(i::Int, n::Int, h, T = 1, lb = -3)
-jrange = (g(T*i/n)-h/2):(-h):(lb) # moving from i to i+1
-krange = (g(T*(i+1)/n)-h/2):(-h):(lb)
-lb = krange[length(krange)]
+hj = g(T*i/n)/floor(1/h) # boundary dependent spacing to ensure that the mean transition is zero
+jrange = g(T*i/n):(-hj):(lb) # moving from i to i+1
+hk = g(T*(i+1)/n)/floor(1/h)
+krange = g(T*(i+1)/n):(-hk):(lb)
+lb = krange[end]
 M = zeros(length(jrange),length(krange))
 	for j = 1:(length(jrange)-1)
+		cj = constC(jrange[j], n, hk, T) # scaling constant is depedendent on the starting point
 		for k = 1:(length(krange)-1)
-			M[j, k] = bbb(jrange[j], krange[k], T*i/n, T*(i+1)/n)*transprob(jrange[j], krange[k], T/n, h)
+			M[j, k] = bbb(jrange[j], krange[k], T*i/n, T*(i+1)/n)*transprob(jrange[j], krange[k], T/n, hk)/cj
 		end
-		M[j, length(krange)] = bbb(jrange[j], lb, T*i/n, T*(i+1)/n)*C(jrange[j], T/n, h, lb)
+		M[j, length(krange)] = bbb(jrange[j], lb, T*i/n, T*(i+1)/n)*C(jrange[j], T/n, hk, lb)/constC(jrange[j], n, hk, T)
 	end
 M[length(jrange), length(krange)] = 1
 return M
 end
 
 
+@doc """
+	pmatrix_end(i, n, h, T, lb)
+
+Returns the transition probability matrix of the Markov chain approximation of Brownian motion
+from time (n-1)/n to time 1
+i: ith time partition 
+n: number of time partitions
+h: space step size
+T: Terminal time
+lb: Lower bound for truncation
+""" -> 
 function pmatrix_end(n::Int, h, T = 1, lb = -3)
+hj = g(T*(n-1)/n)/floor(1/h)
+jrange = g(T*(n-1)/n):(-hj):(lb) 
 h2 = 1/n
-jrange = (g(T*(n-1)/n)-h/2):(-h):(lb) 
 krange = (g(T)-h2/2):(-h2):(lb)
-lb = krange[length(krange)]
+lb = krange[end]
 M = zeros(length(jrange),length(krange))
 	for j = 1:(length(jrange)-1)
 		for k = 1:(length(krange)-1)
 			M[j, k] = bbb(jrange[j], krange[k], T*(n-1)/n, T)*transprob(jrange[j], krange[k], T/n, h2)
 		end
 		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*C(jrange[j], T/n, h2, lb)
-		# M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*cdf(Normal(jrange[j], sqrt(T/n)), lb)
 	end
 M[length(jrange), length(krange)] = 1
 return M
 end
+
 
 @doc """
 	BCP(n::Int, h, T, x0, lb)
 
 Returns the approximated boundary crossing probability
 n: number of time partitions
-h: space step size (set h(n) = n^-0.52 for a good time)
+h: space step size 
 T: Terminal time
 x0: Initial position of Wiener process
 lb: Lower bound for truncation
 """ -> 
 function BCP(n::Int, h, T = 1, x0 = 0, lb = -3, c = 1)
+	h = 1/sqrt(n)
     if (g(T) - lb < c*h) | (x0 > g(0))
         return 1
     end
@@ -170,67 +263,8 @@ function BCP(n::Int, h, T = 1, x0 = 0, lb = -3, c = 1)
 		end
 		prob = prob*pmatrix_end(n, c*h, T, lb)
 	end
-	return 1 - (sum(prob))
+	return 1 - sum(prob)
 end
 
 
 
-
-
-
-
-
-function RichardsonExtrap(N, lb = -3, p = 2, q = 2, l = 1, x0 = 0, T = 1)
-M = zeros(N, N)
-	function fn(n)
-		return 1/n^l
-	end
-	function A(n)
-		return BCP(n, fn(n), T, x0, lb)
-	end
-M[1, 1] = A(2^0)
-for j = 2:N
-	M[j,1] = A(q^(j-1))
-	for k = 2:j
-		M[j, k] = (q^((k-1)*p)*M[j, k-1] - M[j-1, k-1])/(q^((k-1)*p)-1)
-	end
-end
-return M
-end
-
-using PyPlot
-
-function guideplot(N, s = 0.05)
-	plt.xscale("log")
-	plt.yscale("log")
-	grid("on", lw = 0.5)
-	plot(1:N, 1 ./((1:N).^0.5)*s, label = L"$1/\sqrt{n}$", ls = "--", color = "black")
-	plot(1:N, 1 ./(1:N)*s, label = L"1/n", ls = "--", color = "black")
-	# plot(1:N, 1 ./((1:N).^1.5)*s, label = L"1/n^1.5", ls = "--", color = "black")
-	plot(1:N, 1 ./((1:N).^2)*s, label = L"1/n^2", ls = "--", color = "black")
-	# plot(1:N, 1 ./((1:N).^3.5)*s, label = L"1/n^3.5", ls=  "--", color = "black")
-	plot(1:N, 1 ./((1:N).^4)*s, label = L"1/n^4", ls=  "--", color = "black")
-	# plot(1:N, 1 ./((1:N).^6)*s, label = L"1/n^6", ls=  "--", color = "black")
-	xticks(unique(vcat(1:10, 10:10:100)))
-end
-
-
-
-function convergeRE(N)
-limit = exact_limit()
-n_mesh = 2 .^(0:(N-1))
-bcp_mat = RichardsonExtrap(N)
-bcp_RE_vec = zeros(N)
-bcp_vec = zeros(length(n_mesh))
-for i in 1:length(n_mesh)
-	bcp_RE_vec[i] = abs(bcp_mat[i,i] - limit)
-	bcp_vec[i] = abs(BCP(n_mesh[i], 1/n_mesh[i]) - limit)
-end
-figure()
-guideplot(2^(N-1), bcp_vec[1])
-plot(n_mesh, bcp_vec, marker="o")
-plot(n_mesh, bcp_RE_vec, marker="x")
-xlabel("n")
-ylabel(L"|P_n - P|")
-title(L"Error, $|P - P_n|$")
-end

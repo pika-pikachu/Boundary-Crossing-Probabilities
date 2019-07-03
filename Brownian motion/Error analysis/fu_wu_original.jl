@@ -1,26 +1,36 @@
 using Distributions
 
 @doc """
-	g(t, a = 1, b = 1) 
+	g(t, theta = 1) 
 
-Linear boundary with intercept a and gradient b g(t) = a + b t
+Returns the Daniel's boundary at time t. 
+T is the terminal time of the boundary crossing 
+theta affects the the Daniel's boundary at time 0
 """ -> 
-function g(t, a = 1, b = pi)
-  	return a + b*t
+function g(t, theta = 1)
+	if t == 0
+	  return theta/2
+	end
+	a1 = a2 = 1/2
+	a = 1
+  	return theta/2 - t/theta*log(0.5*a1/a + sqrt( 1/4*(a1/a)^2 + (a2/a)*exp(-theta^2/t) ) )
 end
 
 @doc """
-	exact_limit(T = 1 , a = 1, b = 1) 
+	exact_limit(T = 1 , theta = 1) 
 
-Returns the exact probability that a Brownian motion crosses a linear boundary a + bt
+Returns the exact probability that a Brownian motion crosses Daniel's boundary with parameter theta
 """ -> 
-function exact_limit(T = 1, a = 1, b = pi)
+function exact_limit(T = 1, theta = 1)
 	if T == 0 
 	  return 0
 	end
-	b1 = cdf(Normal(0 , 1), b*sqrt(T) + a/sqrt(T))
-	b2 = exp(-2*a*b)*cdf(Normal(0, 1), b*sqrt(T) - a/sqrt(T)) 
-	return 1 - b1 + b2
+	a1 = a2 = 1/2
+	a = 1
+	b1 = cdf(Normal(0 ,sqrt(T)),g(T)/sqrt(T)) 
+	b2 = a1*cdf(Normal(theta,sqrt(T)),g(T)/sqrt(T)) 
+	b3 = a2*cdf(Normal(2*theta,sqrt(T)),g(T)/sqrt(T)) 
+	return 1 - (b1 - (b2 + b3)/a)
 end
 
 @doc """
@@ -31,8 +41,10 @@ a two piecewise linear boundary approximation of g(t):
 g(t), t0  <= t <= t1
 """ -> 
 function bbb(x0, x1, t0, t1)
+    # return 1
     return 1 - exp(-2/(t1-t0)*(g(t1) - x1)*(g(t0) - x0))
 end
+
 
 @doc """
 	C(x, dt, h, lb)
@@ -52,6 +64,29 @@ end
 return sum(vec)
 end
 
+function constG()
+xmesh = -13:13
+pvec = zeros(length(xmesh))
+for i in 1:length(xmesh)
+	pvec[i] = xmesh[i]^2*exp(-xmesh[i]^2/2)/sqrt(2*pi)
+end
+return sum(pvec)
+end
+
+constC = constG()
+
+function const0G()
+xmesh = -13:13
+pvec = zeros(length(xmesh))
+for i in 1:length(xmesh)
+	pvec[i] = (xmesh[i]^2-1)*exp(-xmesh[i]^2/2)
+end
+total = sum(pvec) + 1
+return total/constC/sqrt(2*pi)
+end
+
+constC0 = const0G()
+
 @doc """
 	transprob(x, y, dt, h)
 
@@ -62,7 +97,11 @@ dt: time step size
 h: space step size
 """ -> 
 function transprob(x, y, dt, h)
-	return exp(-(y-x)^2/(2*dt))/sqrt(2*pi*dt)*h
+	if (x - y) != 0
+		return exp(-((y-x)/h)^2/2)/sqrt(2*pi)/constC
+	else
+		return constC0
+	end
 end
 
 @doc """
@@ -115,22 +154,31 @@ return M
 end
 
 
-function pmatrix_end(n::Int, h, T = 1, lb = -3)
-h2 = 3/n^2 
-# h2 = 3/n^(9/4)
-jrange = (g(T*(n-1)/n)-h/2):(-h):(lb) # moving from i to i+1
-krange = (g(T)-h2/2):(-h2):(lb)
+
+
+function pmatrix(i::Int, n::Int, h, T = 1, lb = -3)
+jrange = (g(T*i/n)-h/2):(-h):(lb) # moving from i to i+1
+krange = (g(T*(i+1)/n)-h/2):(-h):(lb)
 lb = krange[length(krange)]
 M = zeros(length(jrange),length(krange))
 	for j = 1:(length(jrange)-1)
 		for k = 1:(length(krange)-1)
-			M[j, k] = bbb(jrange[j], krange[k], T*(n-1)/n, T)*transprob(jrange[j], krange[k], T/n, h2)
+			M[j, k] = bbb(jrange[j], krange[k], T*i/n, T*(i+1)/n)*transprob(jrange[j], krange[k], T/n, h)
 		end
-		M[j, length(krange)] = bbb(jrange[j], lb, T*(n-1)/n, T)*C(jrange[j], T/n, h2, lb)
+		M[j, length(krange)] = bbb(jrange[j], lb, T*i/n, T*(i+1)/n)*C(jrange[j], T/n, h, lb)
 	end
 M[length(jrange), length(krange)] = 1
 return M
 end
+
+
+
+
+
+
+
+
+
 
 @doc """
 	BCP(n::Int, h, T, x0, lb)
@@ -142,22 +190,14 @@ T: Terminal time
 x0: Initial position of Wiener process
 lb: Lower bound for truncation
 """ -> 
-function BCP(n::Int, h, T = 1, x0 = 0, lb = -3, c = 1)
-    if (g(T) - lb < c*h) | (x0 > g(0))
+function BCP(n::Int, h, T = 1, x0 = 0, lb = -3)
+    if (g(T) - lb < h) | (x0 > g(0))
         return 1
     end
-    if n == 1
-    	prob = transpose(pmatrix0(n, c*h, T, x0, lb))
-		for i = 1:(n-1)
-			prob = prob*pmatrix(i, n, c*h, T, lb)
-		end
-		return 1 - (sum(prob))
-    end
-	prob = transpose(pmatrix0(n, c*h, T, x0, lb))
-	for i = 1:(n-2)
-		prob = prob*pmatrix(i, n, c*h, T, lb)
+	prob = transpose(pmatrix0(n, h, T, x0, lb))
+	for i = 1:(n-1)
+		prob = prob*pmatrix(i, n, h, T, lb)
 	end
-		prob = prob*pmatrix_end(n, c*h, T, lb)
 	return 1 - (sum(prob))
 end
 

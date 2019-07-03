@@ -5,7 +5,7 @@ using Distributions
 
 Linear boundary with intercept a and gradient b g(t) = a + b t
 """ -> 
-function g(t, a = 1, b = pi)
+function g(t, a = 1, b = pi/2)
   	return a + b*t
 end
 
@@ -14,7 +14,7 @@ end
 
 Returns the exact probability that a Brownian motion crosses a linear boundary a + bt
 """ -> 
-function exact_limit(T = 1, a = 1, b = pi)
+function exact_limit(T = 1, a = 1, b = pi/2)
 	if T == 0 
 	  return 0
 	end
@@ -77,7 +77,7 @@ x0: Starting position
 lb: Lower bound for truncation
 """ -> 
 function pmatrix0(n::Int, h, T = 1, x0 = 0, lb = -3)
-range = (g(T/n)-h/2):(-h):(lb)
+range = reverse(cat(ceil(lb/h):0, 1:ceil(g(T/n)/h), dims = 1)*h)
 l = length(range)
 lb = range[end]
 vec = zeros(l)
@@ -100,8 +100,8 @@ T: Terminal time
 lb: Lower bound for truncation
 """ -> 
 function pmatrix(i::Int, n::Int, h, T = 1, lb = -3)
-jrange = (g(T*i/n)-h/2):(-h):(lb) # moving from i to i+1
-krange = (g(T*(i+1)/n)-h/2):(-h):(lb)
+jrange = reverse(cat(ceil(lb/h):0, 1:ceil(g(T*i/n)/h), dims = 1)*h) # moving from i to i+1
+krange = reverse(cat(ceil(lb/h):0, 1:ceil(g(T*(i+1)/n)/h), dims = 1)*h)
 lb = krange[length(krange)]
 M = zeros(length(jrange),length(krange))
 	for j = 1:(length(jrange)-1)
@@ -117,9 +117,10 @@ end
 
 function pmatrix_end(n::Int, h, T = 1, lb = -3)
 h2 = 3/n^2 
+# h2 = 1/n 
 # h2 = 3/n^(9/4)
-jrange = (g(T*(n-1)/n)-h/2):(-h):(lb) # moving from i to i+1
-krange = (g(T)-h2/2):(-h2):(lb)
+jrange = reverse(cat(ceil(lb/h):0, 1:ceil(g(T*(n-1)/n)/h), dims = 1)*h)
+krange = reverse(cat(ceil(lb/h2):0, 1:ceil(g(T)/h2), dims = 1)*h2)
 lb = krange[length(krange)]
 M = zeros(length(jrange),length(krange))
 	for j = 1:(length(jrange)-1)
