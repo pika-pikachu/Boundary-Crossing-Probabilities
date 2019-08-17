@@ -1,5 +1,6 @@
-# Integral of Brownian motion
+# Monte carlo simulation of integrated Brownian motion using rectangular and midpoint approximations.
 # June 20th 2019
+#
 
 using PyPlot
 using Statistics

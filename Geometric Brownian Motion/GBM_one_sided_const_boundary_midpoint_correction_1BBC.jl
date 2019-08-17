@@ -1,3 +1,5 @@
+# No convergence, the grid doesn't get fine enough near zero
+
 using PyPlot
 using Distributions
 
