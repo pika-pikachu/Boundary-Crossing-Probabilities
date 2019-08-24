@@ -10,12 +10,15 @@ using Statistics
 
 Returns a single simulation of a Brownian motion, its integral - both rectangular and midpoint
 n: Number of time partitions
+a: Initial point of IBM
+b: Initial point of the Brownian motion
 """ -> 
-function monte_carlo_bm(n = 10^3)
-x = cumsum([0; randn(n-1)])/sqrt(n) # Brownian motion
+function monte_carlo_bm(n = 10^3, a = 0, b = 0)
+bm_start = b
+x = cumsum([0; randn(n-1)])/sqrt(n) .+ bm_start  # Brownian motion
 # y = cumsum(x)./(1:n) # Riemann sum rectangle rule
-y = cumsum(x)./n # Riemann sum rectangle rule
-z = y .- (x./(2*n))  # Riemann sum midpoint rule
+y = cumsum(x)./n .+ a# Riemann sum rectangle rule
+z = y .- (x./(2*n))  .+ a# Riemann sum midpoint rule
 return [x, y, z]
 end
 
@@ -26,11 +29,11 @@ Returns simulations of a Brownian motion and its integral
 n: Number of time partitions
 N: Number of Monte Carlo paths
 """ -> 
-function monte_carlo_sim(n = 10^3, N = 100)
+function monte_carlo_sim(n = 10^3, N = 100, a = 0, b = 0)
 figure(figsize=(12, 10))
 time_mesh = range(0, stop = 1, length = n)
 for i in 1:N
-	z_vec = monte_carlo_bm(n)
+	z_vec = monte_carlo_bm(n, a, b)
 	BM = z_vec[1]
 	MAVG_BM = z_vec[2]
 	subplot(2,3,1)
@@ -48,7 +51,12 @@ for i in 1:N
 		xlabel(L"$W_t$")
 		ylabel(L"$\int_0^t W_s ds$")
 		axis([-4,4,-3,3])
-end
+	subplot(2,3,5)
+		plot(MAVG_BM,BM, color = "black", alpha = 0.05 )
+		xlabel(L"$\int_0^t W_s ds$")
+		ylabel(L"$W_t$")
+		axis([-4,4,-3,3])
+end	
 subplot(2,3,3)
 	z_vec = monte_carlo_bm(n)
 	BM = z_vec[1]
@@ -60,13 +68,13 @@ subplot(2,3,3)
 	xlabel(L"$t$")
 	legend()
 	axis([0,1,-4,4])
-subplot(2,3,5)
-	plot(BM,MAVG_BM, color = "red", linewidth = "1" )
-	xlabel(L"$W_t$")
-	ylabel(L"$\int_0^t W_s ds$")
+subplot(2,3,6)
+	plot(MAVG_BM,BM, color = "red", linewidth = "1" )
+	xlabel(L"$\int_0^t W_s ds$")
+	ylabel(L"$W_t$")
 	for i in [1, floor(Int,n/4),floor(Int,n/2),floor(Int,3*n/4), n] 
-		plt[:scatter](BM[i], MAVG_BM[i], color = "black")
-		plt[:text](BM[i], MAVG_BM[i], join(["t=",i/n]), fontsize = 9)
+		plt[:scatter](MAVG_BM[i],BM[i], color = "black")
+		plt[:text](MAVG_BM[i], BM[i] , join(["t=",i/n]), fontsize = 9)
 	end
 	axis([-4,4,-3,3])
 end
@@ -177,4 +185,4 @@ while 1 == 1 # non ending loop
 end
 end
 
-dyn_conv_plot(80)
+# dyn_conv_plot(80)
